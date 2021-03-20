@@ -9,6 +9,9 @@ import { VoiceConnection } from 'discord.js'
 import internal from 'stream'
 import { StreamDispatcher } from 'discord.js';
 import { NewsChannel } from 'discord.js';
+const Player = require('play-sound')({ player: "C:/Programy/mplayer-svn-38151-x86_64/mplayer.exe"});
+
+const timeToGuess = 30;
 
 const stopCommand = '!stop'
 const skipCommand = '!skip'
@@ -38,6 +41,12 @@ export class MusicQuiz {
         this.arguments = args
     }
 
+    async playIntro() {
+        Player.play('H:\\Dev\\projects\\nodejs\\discord-music-quizzer\\assets\\jakatomelodia-jingiel.mp3', function (err: any) {
+            if (err) throw err;
+        });
+    }
+
     async start() {
         this.songs = await this.getSongs(
             this.arguments.playlist,
@@ -46,7 +55,7 @@ export class MusicQuiz {
 
         if (!this.songs || this.songs.length === 0) {
             if (this.songs && this.songs.length === 0) {
-                await this.textChannel.send('Playlist contains no songs')
+                await this.textChannel.send('Playlista nie ma żadnych piosen pajacuu')
             }
 
             this.finish()
@@ -57,7 +66,7 @@ export class MusicQuiz {
         try {
             this.connection = await this.voiceChannel.join()
         } catch (e) {
-            await this.textChannel.send('Could not join voice channel. Is it full?')
+            await this.textChannel.send('Nie moge na kanał wbić :/')
             await this.finish()
 
             return
@@ -66,16 +75,16 @@ export class MusicQuiz {
         this.currentSong = 0
         this.scores = {}
         this.textChannel.send(`
-            **Let's get started**! :headphones: :tada:
-            **${this.songs.length}** songs have been selected randomly from the playlist.
-            You have one minute to guess each song.
+            **JAKA TO MELODIAAAAAAA**! :headphones: :tada:
+            **${this.songs.length}** pioseneczek zostało wytypowanych do dzisiejszej rozgrywki.
+            Macie pół minuty by zgadnąć każdą.
 
             ${this.pointText()}
 
-            Type \`${stopCommand}\` to vote for continuing to the next song.
-            Type \`${skipCommand}\` to stop the quiz.
+            Wpisz \`${stopCommand}\` by zagłosować za ominięciem piosen.
+            Wpisz \`${skipCommand}\` żeby zdjąć program z anteny.
 
-            - GLHF :microphone:
+            - ZACZYNAMY :microphone:
         `.replace(/  +/g, ''))
         this.startPlaying()
 
@@ -96,7 +105,7 @@ export class MusicQuiz {
         const song = this.songs[this.currentSong]
         const link = await this.findSong(song)
         if (!link) {
-            this.nextSong('Could not find the song on Youtube. Skipping to next.')
+            this.nextSong('Ups. Nie udało się znaleźć tej piosen na jutubie :( Biorę kolejną')
 
             return
         }
@@ -106,20 +115,20 @@ export class MusicQuiz {
         } catch (e) {
             console.error(e);
 
-            this.nextSong('Could not stream the song from Youtube. Skipping to next.')
+            this.nextSong('Jutub się obraził i nie mogę zapuścić songa grrrr')
 
             return
         }
 
         this.songTimeout = setTimeout(() => {
-            this.nextSong('Song was not guessed in time')
-        }, 1000 * 60);
+            this.nextSong('Lamusy nikt nie zgadł XD')
+        }, 1000 * timeToGuess);
 
         try {
             this.voiceStream = this.connection.play(this.musicStream, { type: 'opus', volume: .5 })
 
             this.voiceStream.on('error', () => {
-                    this.textChannel.send('Connection got interrupted. Please try again')
+                this.textChannel.send('Coś się skurwiło, spróbuj jeszcze raz :x')
 
                     this.finish()
                 })
@@ -128,7 +137,7 @@ export class MusicQuiz {
         } catch (e) {
             console.error(e);
 
-            this.textChannel.send('Connection got interrupted. Please try again')
+            this.textChannel.send('Coś się skurwiło, spróbuj jeszcze raz :x')
 
             this.finish()
         }
@@ -137,7 +146,7 @@ export class MusicQuiz {
     async handleMessage(message: CommandoMessage) {
         const content = message.content.toLowerCase()
         if (content === stopCommand) {
-            await this.printStatus('Quiz stopped!')
+            await this.printStatus('Koniec!')
             await this.finish()
 
             return
@@ -169,7 +178,7 @@ export class MusicQuiz {
         this.scores[message.author.id] = score
 
         if (this.titleGuessed && this.artistGuessed) {
-            this.nextSong('Song guessed!')
+            this.nextSong('Brawko!')
         }
 
         if (!correct) {
@@ -187,12 +196,12 @@ export class MusicQuiz {
         const members = this.voiceChannel.members
             .filter(member => !member.user.bot)
         if (this.skippers.length === members.size) {
-            this.nextSong('Song skipped!')
+            this.nextSong('Chujowa piosenka, zgadzam się.')
 
             return
         }
 
-        this.textChannel.send(`**(${this.skippers.length}/${members.size})** to skip the song`)
+        this.textChannel.send(`**(${this.skippers.length}/${members.size})** do ominięcia piosenki`)
     }
 
     async finish() {
@@ -227,7 +236,7 @@ export class MusicQuiz {
             > **${song.title}** by **${song.artist}**
             > Link: || ${song.link} ||
 
-            **__SCORES__**
+            **__WYNIKI__**
             ${this.getScores()}
         `.replace(/  +/g, ''))
     }
@@ -247,7 +256,7 @@ export class MusicQuiz {
                     position = ':third_place:'
                 }
 
-                return `${position} <@!${member.id}> ${this.scores[member.id] || 0} points`
+                return `${position} <@!${member.id}> ${this.scores[member.id] || 0} pktów`
             })
             .join('\n')
     }
@@ -262,8 +271,8 @@ export class MusicQuiz {
 
             this.reactPermissionNotified = true
             this.textChannel.send(`
-                Please give me permission to react to messages.
-                You can easily do this by clicking the following link and adding me to your server again.
+                Nie mam mocy.
+                Popraw permissiony dodając mnie ponownie do serwera.
                 https://discordapp.com/api/oauth2/authorize?client_id=${process.env.DISCORD_CLIENT_ID}&scope=bot&permissions=3147840
             `.replace(/  +/g, ''))
         }
@@ -288,7 +297,7 @@ export class MusicQuiz {
                     artist: (song.artists[0] || {}).name
                 }))
         } catch (error) {
-            this.textChannel.send('Could not retrieve the playlist. Make sure it\'s public')
+            this.textChannel.send('Nie mogę ogarnąć tej playlist. Upewnij się, że to id ze spotify i playlista jest publiczna.')
 
             return null
         }
@@ -301,7 +310,7 @@ export class MusicQuiz {
 
             return result?.link ?? null
         } catch (e) {
-            await this.textChannel.send('Oh no... Youtube police busted the party :(\nPlease try again later.')
+            await this.textChannel.send('Jutub się zjebał aaaa :(\nSpróbuj później, bo chyba API mi się skończyło.')
             this.finish()
 
             throw e
@@ -317,24 +326,50 @@ export class MusicQuiz {
      * @param name string
      */
     stripSongName(name: string): string {
-        return name.replace(/ \(.*\)/g, '')
+        name = name.replace(/ \(.*\)/g, '')
             .replace(/ - .*$/, '')
+            .replace(/'/, '')
+            .replace(/./, '');
+
+        name = this.replaceDiacritics(name);
+
+        return name;
+    }
+
+    replaceDiacritics(song: string) {
+        var diacritics = [
+            /[\300-\306]/g, /[\340-\346]/g,  // A, a
+            /[\310-\313]/g, /[\350-\353]/g,  // E, e
+            /[\314-\317]/g, /[\354-\357]/g,  // I, i
+            /[\322-\330]/g, /[\362-\370]/g,  // O, o
+            /[\331-\334]/g, /[\371-\374]/g,  // U, u
+            /[\321]/g, /[\361]/g, // N, n
+            /[\307]/g, /[\347]/g, // C, c
+        ];
+
+        var chars = ['A', 'a', 'E', 'e', 'I', 'i', 'O', 'o', 'U', 'u', 'N', 'n', 'C', 'c'];
+
+        for (var i = 0; i < diacritics.length; i++) {
+            song = song.replace(diacritics[i], chars[i]);
+        }
+
+        return song;
     }
 
     pointText(): string {
         if (this.arguments.only === 'artist') {
-            return 'Guess the artist of the song by typing in chat. When guessed corretly you are awarded **3 points**.'
+            return 'Zgadnij nazwę wykonawcy. Jak zgadniesz to dostajesz **3 pkty**.'
         }
 
         if (this.arguments.only === 'title') {
-            return 'Guess the title of the song by typing in chat. When guessed corretly you are awarded **2 points**.'
+            return 'Zgadnij tytuł piosenki. Jak zgadniesz to dostajesz **2 pkty**.'
         }
 
         return `
-            Guess the song and artist by typing in chat. Points are awarded as follows:
-            > Artist - **3 points**
-            > Title - **2 points**
-            > Artist + title - **5 points**
+            Zgadnij tytuł i wykonawcę. Pkty przyznawane są następująco:
+            > Wykonawca - **3 pkty**
+            > Tytuł - **2 pkty**
+            > Wykonawca + tytuł - **5 pktów**
         `.replace(/  +/g, '')
     }
 }

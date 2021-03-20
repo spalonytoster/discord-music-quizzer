@@ -6,25 +6,26 @@ import { Message } from "discord.js"
 export class MusicQuizCommand extends Command {
     constructor(client: CommandoClient) {
         super(client, {
-            name: 'music-quiz',
+            name: 'jakatomelodia',
             memberName: 'music-quizzer',
             group: 'music',
-            description: 'Music Quiz from Spotify playlists',
+            description: 'Jaka to melodiaaaaaaaaAAAAAA! TU TU! TYRYRYRY! TY TYRYRY RY!',
             guildOnly: true,
             throttling: {usages: 1, duration: 10},
             args: [
                 {
                     key: 'playlist',
-                    prompt: 'Which playlist to play songs from',
+                    prompt: 'Dej id playlisty na spotify',
                     type: 'string',
+                    default: '4AZqmvSu69hCY9wAVV1Zp2'
                 },
                 {
                     key: 'songs',
-                    prompt: 'How many songs the quiz will contain',
+                    prompt: 'Ile chcesz piosen?',
                     type: 'string',
                     default: 10
-                },
-                {
+                }
+                ,{
                     key: 'only',
                     prompt: 'Only this answer is required; artist, title or both',
                     type: 'string',
@@ -37,17 +38,20 @@ export class MusicQuizCommand extends Command {
 
     async run(message: CommandoMessage, args: QuizArgs, fromPattern: boolean): Promise<Message | Message[]> {
         if (message.guild.quiz) {
-            return message.say('Quiz is already running')
+            return message.say('Pajacu już na wizji jesteśmy')
         }
 
         if (message.member.voice.channel === null) {
-            return message.say('Please join a voice channel and try again')
+            return message.say('Ale wejdź najpierw na voice channel daunie')
         }
 
         message.guild.quiz = new MusicQuiz(message, args)
 
         try {
-            message.guild.quiz.start()
+            message.guild.quiz.playIntro();
+            setTimeout(function() {
+                message.guild.quiz.start()
+            }, 17000);
         } catch (e) {
             console.log("Process ded");
         }

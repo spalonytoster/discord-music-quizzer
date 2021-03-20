@@ -27,7 +27,7 @@ client.registry
 
 client.once('ready', () => {
     console.log('Ready!')
-    client.user.setActivity('Ready to quiz')
+    client.user.setActivity('Jaka to melodia')
 })
 client.on("error", (e) => console.error('Discord error', e))
 client.on("warn", (e) => console.warn('Discord warn', e))
