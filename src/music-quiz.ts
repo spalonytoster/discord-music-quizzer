@@ -348,7 +348,8 @@ export class MusicQuiz {
 
     furtherStripSongName(name: string): string {
         name = name.replace(/'/, '')
-            .replace(/./, '');
+            .replace(/./, '')
+            .replace(/,/, '');
 
         return name;
     }
@@ -366,7 +367,7 @@ export class MusicQuiz {
 
         var chars = ['A', 'a', 'E', 'e', 'I', 'i', 'O', 'o', 'U', 'u', 'N', 'n', 'C', 'c'];
 
-        for (var i = 0; i < diacritics.length; i++) {
+        for (let i = 0; i < diacritics.length; i++) {
             song = song.replace(diacritics[i], chars[i]);
         }
 
