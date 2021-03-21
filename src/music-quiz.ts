@@ -9,9 +9,9 @@ import { VoiceConnection } from 'discord.js'
 import internal from 'stream'
 import { StreamDispatcher } from 'discord.js';
 import { NewsChannel } from 'discord.js';
-const Player = require('play-sound')({ player: "C:/Programy/mplayer-svn-38151-x86_64/mplayer.exe"});
+const shuffle = require('shuffle-array')
 
-const timeToGuess = 30;
+const timeToGuess = 45;
 
 const stopCommand = '!stop'
 const skipCommand = '!skip'
@@ -41,11 +41,11 @@ export class MusicQuiz {
         this.arguments = args
     }
 
-    async playIntro() {
-        Player.play('H:\\Dev\\projects\\nodejs\\discord-music-quizzer\\assets\\jakatomelodia-jingiel.mp3', function (err: any) {
-            if (err) throw err;
-        });
-    }
+    // async playIntro() {
+    //     Player.play('H:\\Dev\\projects\\nodejs\\discord-music-quizzer\\assets\\jakatomelodia-jingiel.mp3', function (err: any) {
+    //         if (err) throw err;
+    //     });
+    // }
 
     async start() {
         this.songs = await this.getSongs(
@@ -65,6 +65,7 @@ export class MusicQuiz {
 
         try {
             this.connection = await this.voiceChannel.join()
+            this.connection.play('H:\\Dev\\projects\\nodejs\\discord-music-quizzer\\assets\\jakatomelodia-jingiel.mp3')
         } catch (e) {
             await this.textChannel.send('Nie moge na kanał wbić :/')
             await this.finish()
@@ -86,7 +87,10 @@ export class MusicQuiz {
 
             - ZACZYNAMY :microphone:
         `.replace(/  +/g, ''))
-        this.startPlaying()
+
+        setTimeout(() => {
+            this.startPlaying()
+        }, 17000)
 
         this.messageCollector = this.textChannel
             .createMessageCollector((message: CommandoMessage) => !message.author.bot)
@@ -287,18 +291,28 @@ export class MusicQuiz {
         }
 
         try {
-            return (await spotify.getPlaylist(playlist))
+            const spotifySongs: SpotifyApi.TrackObjectFull[] = shuffle((await spotify.getPlaylist(playlist)));
+            // console.log('whole playlist:');
+            // console.log(spotifySongs.map(song => song.name));
+
+            const songlist: Song[] = spotifySongs
                 .sort(() => Math.random() > 0.5 ? 1 : -1)
-                .filter((song, index) => index < amount)
-                .map(song => ({
+                .filter((song: SpotifyApi.TrackObjectFull, index: any) => index < amount)
+                .map((song: SpotifyApi.TrackObjectFull) => ({
                     link: `https://open.spotify.com/track/${song.id}`,
                     previewUrl: song.preview_url,
                     title: this.stripSongName(song.name),
                     artist: (song.artists[0] || {}).name
-                }))
-        } catch (error) {
-            this.textChannel.send('Nie mogę ogarnąć tej playlist. Upewnij się, że to id ze spotify i playlista jest publiczna.')
+                }));
 
+            console.log(songlist.map(song => `${song.artist} - ${song.title}`));
+                
+            return songlist;
+
+        } catch (error) {
+            this.textChannel.send('Nie mogę ogarnąć tej playlisty. Upewnij się, że to id ze spotify i playlista jest publiczna.')
+            console.log(error);
+            
             return null
         }
     }
@@ -306,7 +320,9 @@ export class MusicQuiz {
     async findSong(song: Song): Promise<string> {
         try {
             // const result = await ytsr(`${song.title} - ${song.artist}`, { limit: 1 })
-            const result = await Youtube.searchOne(`${song.title} - ${song.artist}`)
+            console.log(`searching youtube: '${song.title} ${song.artist}'`);
+            
+            const result = await Youtube.searchOne(`${song.title} ${song.artist}`)
 
             return result?.link ?? null
         } catch (e) {
@@ -326,12 +342,19 @@ export class MusicQuiz {
      * @param name string
      */
     stripSongName(name: string): string {
-        name = name.replace(/ \(.*\)/g, '')
+        return name.replace(/ \(.*\)/g, '')
             .replace(/ - .*$/, '')
-            .replace(/'/, '')
-            .replace(/./, '');
+            // .replace(/'/, '')
+            // .replace(/./, '');
 
-        name = this.replaceDiacritics(name);
+        // name = this.replaceDiacritics(name);
+
+        // return name;
+    }
+
+    furtherStripSongName(name: string): string {
+        name = name.replace(/'/, '')
+            .replace(/./, '');
 
         return name;
     }
