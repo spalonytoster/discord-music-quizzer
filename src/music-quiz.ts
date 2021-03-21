@@ -41,12 +41,6 @@ export class MusicQuiz {
         this.arguments = args
     }
 
-    // async playIntro() {
-    //     Player.play('H:\\Dev\\projects\\nodejs\\discord-music-quizzer\\assets\\jakatomelodia-jingiel.mp3', function (err: any) {
-    //         if (err) throw err;
-    //     });
-    // }
-
     async start() {
         this.songs = await this.getSongs(
             this.arguments.playlist,
@@ -65,7 +59,7 @@ export class MusicQuiz {
 
         try {
             this.connection = await this.voiceChannel.join()
-            this.connection.play('H:\\Dev\\projects\\nodejs\\discord-music-quizzer\\assets\\jakatomelodia-jingiel.mp3')
+            this.connection.play(await ytdl('https://www.youtube.com/watch?v=7mSoRgnYgaU'), { type: 'opus', volume: .5 })
         } catch (e) {
             await this.textChannel.send('Nie moge na kanał wbić :/')
             await this.finish()
