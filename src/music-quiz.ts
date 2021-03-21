@@ -351,7 +351,7 @@ export class MusicQuiz {
             .replace(/./, '')
             .replace(/,/, '');
 
-        return name;
+        return this.replaceDiacritics(name);
     }
 
     replaceDiacritics(song: string) {
