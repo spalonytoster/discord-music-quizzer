@@ -61,6 +61,8 @@ export class MusicQuiz {
             this.connection = await this.voiceChannel.join()
             this.connection.play(await ytdl('https://www.youtube.com/watch?v=7mSoRgnYgaU'), { type: 'opus', volume: .5 })
         } catch (e) {
+            console.error('Error while trying to join channel and play intro', e)
+
             await this.textChannel.send('Nie moge na kanał wbić :/')
             await this.finish()
 

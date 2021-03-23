@@ -49,9 +49,6 @@ export class MusicQuizCommand extends Command {
 
         try {
             message.guild.quiz.start()
-            // message.guild.quiz.playIntro();
-            // setTimeout(function() {
-            // }, 17000);
         } catch (e) {
             console.log("Process ded");
         }
