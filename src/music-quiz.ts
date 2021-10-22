@@ -59,14 +59,22 @@ export class MusicQuiz {
 
         try {
             this.connection = await this.voiceChannel.join()
-            this.connection.play(await ytdl('https://www.youtube.com/watch?v=Oeaqmn9ZKJo'), { type: 'opus', volume: .5 })
         } catch (e) {
             console.error('Error while trying to join channel and play intro', e)
-
+            
             await this.textChannel.send('Nie moge na kanał wbić :/')
             await this.finish()
-
+            
             return
+        }
+        
+        let quizStartDelayInMillis = 0
+        const introYoutubeUrl: string = 'https://www.youtube.com/watch?v=Oeaqmn9ZKJo';
+        try {
+            this.connection.play(await ytdl(introYoutubeUrl), { type: 'opus', volume: .5 })
+            quizStartDelayInMillis = 17000
+        } catch (e) {
+            console.error('Error while trying to play intro from url: ', introYoutubeUrl)
         }
 
         this.currentSong = 0
@@ -86,11 +94,11 @@ export class MusicQuiz {
 
         setTimeout(() => {
             this.startPlaying()
-        }, 17000)
 
-        this.messageCollector = this.textChannel
-            .createMessageCollector((message: CommandoMessage) => !message.author.bot)
-            .on('collect', message => this.handleMessage(message))
+            this.messageCollector = this.textChannel
+                .createMessageCollector((message: CommandoMessage) => !message.author.bot)
+                .on('collect', message => this.handleMessage(message))
+        }, quizStartDelayInMillis)
     }
 
     async startPlaying() {
@@ -127,13 +135,13 @@ export class MusicQuiz {
         try {
             this.voiceStream = this.connection.play(this.musicStream, { type: 'opus', volume: .5 })
 
-            this.voiceStream.on('error', () => {
+            this.voiceStream.on('error', (err: Error) => {
                 this.textChannel.send('Coś się skurwiło, spróbuj jeszcze raz :x')
-
+                    console.error(err)
                     this.finish()
                 })
+                
             this.voiceStream.on('finish', () => this.finish())
-            this.voiceStream
         } catch (e) {
             console.error(e);
 
