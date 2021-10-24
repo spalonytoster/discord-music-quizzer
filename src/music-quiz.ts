@@ -1,14 +1,11 @@
-import { MessageCollector, VoiceChannel, TextChannel, Guild, DMChannel } from 'discord.js';
+import { MessageCollector, VoiceChannel, TextChannel, Guild, DMChannel, VoiceConnection, StreamDispatcher, NewsChannel } from 'discord.js';
 import ytdl from 'ytdl-core-discord'
-import { QuizArgs } from './types/quiz-args'
+import { QuizArgs } from 'quiz-args'
 import { CommandoMessage } from 'discord.js-commando'
 import Spotify from './spotify'
 import Youtube from 'scrape-youtube'
 import { Song } from 'song'
-import { VoiceConnection } from 'discord.js'
 import internal from 'stream'
-import { StreamDispatcher } from 'discord.js';
-import { NewsChannel } from 'discord.js';
 const shuffle = require('shuffle-array')
 
 const timeToGuess = 45;
@@ -52,7 +49,7 @@ export class MusicQuiz {
                 await this.textChannel.send('Playlista nie ma żadnych piosen pajacuu')
             }
 
-            this.finish()
+            await this.finish()
 
             return
         }
@@ -79,7 +76,7 @@ export class MusicQuiz {
 
         this.currentSong = 0
         this.scores = {}
-        this.textChannel.send(`
+        await this.textChannel.send(`
             **JAKA TO MELODIAAAAAAA**! :headphones: :tada:
             **${this.songs.length}** pioseneczek zostało wytypowanych do dzisiejszej rozgrywki.
             Macie pół minuty by zgadnąć każdą.
@@ -113,18 +110,15 @@ export class MusicQuiz {
         const song = this.songs[this.currentSong]
         const link = await this.findSong(song)
         if (!link) {
-            this.nextSong('Ups. Nie udało się znaleźć tej piosen na jutubie :( Biorę kolejną')
-
+            await this.nextSong('Ups. Nie udało się znaleźć tej piosen na jutubie :( Biorę kolejną')
             return
         }
 
         try {
             this.musicStream = await ytdl(link)
-        } catch (e) {
-            console.error(e);
-
-            this.nextSong('Jutub się obraził i nie mogę zapuścić songa grrrr')
-
+        } catch (err) {
+            await this.nextSong('Jutub się obraził i nie mogę zapuścić songa grrrr')
+            console.error(err);
             return
         }
 
@@ -144,10 +138,8 @@ export class MusicQuiz {
             this.voiceStream.on('finish', () => this.finish())
         } catch (e) {
             console.error(e);
-
-            this.textChannel.send('Coś się skurwiło, spróbuj jeszcze raz :x')
-
-            this.finish()
+            await this.textChannel.send('Coś się skurwiło, spróbuj jeszcze raz :x')
+            await this.finish()
         }
     }
 
@@ -162,7 +154,6 @@ export class MusicQuiz {
 
         if (content === skipCommand) {
             await this.handleSkip(message.author.id)
-
             return
         }
 
@@ -186,7 +177,7 @@ export class MusicQuiz {
         this.scores[message.author.id] = score
 
         if (this.titleGuessed && this.artistGuessed) {
-            this.nextSong('Brawko!')
+            await this.nextSong('Brawko!')
         }
 
         if (!correct) {
@@ -194,7 +185,7 @@ export class MusicQuiz {
         }
     }
 
-    handleSkip(userID: string) {
+    async handleSkip(userID: string) {
         if (this.skippers.includes(userID)) {
             return
         }
@@ -204,12 +195,12 @@ export class MusicQuiz {
         const members = this.voiceChannel.members
             .filter(member => !member.user.bot)
         if (this.skippers.length === members.size) {
-            this.nextSong('Chujowa piosenka, zgadzam się.')
+            await this.nextSong('Chujowa piosenka, zgadzam się.')
 
             return
         }
 
-        this.textChannel.send(`**(${this.skippers.length}/${members.size})** do ominięcia piosenki`)
+        await this.textChannel.send(`**(${this.skippers.length}/${members.size})** do ominięcia piosenki`)
     }
 
     async finish() {
@@ -222,9 +213,9 @@ export class MusicQuiz {
         this.voiceChannel.leave()
     }
 
-    nextSong(status: string) {
+    async nextSong(status: string) {
         if (this.songTimeout) clearTimeout(this.songTimeout)
-        this.printStatus(status)
+        await this.printStatus(status)
 
         if (this.currentSong + 1 === this.songs.length) {
             return this.finish()
@@ -234,7 +225,7 @@ export class MusicQuiz {
         this.skippers = []
         if (this.musicStream) this.musicStream.destroy()
         if (this.voiceStream) this.voiceStream.destroy()
-        this.startPlaying()
+        await this.startPlaying()
     }
 
     async printStatus(message: string) {
@@ -278,7 +269,7 @@ export class MusicQuiz {
             }
 
             this.reactPermissionNotified = true
-            this.textChannel.send(`
+            await this.textChannel.send(`
                 Nie mam mocy.
                 Popraw permissiony dodając mnie ponownie do serwera.
                 https://discordapp.com/api/oauth2/authorize?client_id=${process.env.DISCORD_CLIENT_ID}&scope=bot&permissions=3147840
@@ -313,9 +304,9 @@ export class MusicQuiz {
                 
             return songlist;
 
-        } catch (error) {
-            this.textChannel.send('Nie mogę ogarnąć tej playlisty. Upewnij się, że to id ze spotify i playlista jest publiczna.')
-            console.log(error);
+        } catch (err) {
+            await this.textChannel.send('Nie mogę ogarnąć tej playlisty. Upewnij się, że to id ze spotify i playlista jest publiczna.')
+            console.error(err);
             
             return null
         }
@@ -331,7 +322,7 @@ export class MusicQuiz {
             return result?.link ?? null
         } catch (e) {
             await this.textChannel.send('Jutub się zjebał aaaa :(\nSpróbuj później, bo chyba API mi się skończyło.')
-            this.finish()
+            await this.finish()
 
             throw e
         }
@@ -365,7 +356,7 @@ export class MusicQuiz {
     }
 
     replaceDiacritics(song: string) {
-        var diacritics = [
+        const diacritics = [
             /[\300-\306]/g, /[\340-\346]/g,  // A, a
             /[\310-\313]/g, /[\350-\353]/g,  // E, e
             /[\314-\317]/g, /[\354-\357]/g,  // I, i
@@ -375,7 +366,7 @@ export class MusicQuiz {
             /[\307]/g, /[\347]/g, // C, c
         ];
 
-        var chars = ['A', 'a', 'E', 'e', 'I', 'i', 'O', 'o', 'U', 'u', 'N', 'n', 'C', 'c'];
+        const chars = ['A', 'a', 'E', 'e', 'I', 'i', 'O', 'o', 'U', 'u', 'N', 'n', 'C', 'c'];
 
         for (let i = 0; i < diacritics.length; i++) {
             song = song.replace(diacritics[i], chars[i]);
