@@ -48,7 +48,7 @@ export class MusicQuizCommand extends Command {
         message.guild.quiz = new MusicQuiz(message, args)
 
         try {
-            message.guild.quiz.start()
+            await message.guild.quiz.start()
         } catch (e) {
             console.log("Process ded");
         }
