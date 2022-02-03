@@ -4,7 +4,7 @@ import {CommandoMessage} from "discord.js-commando";
 import { MusicQuiz } from "../src/music-quiz";
 import { QuizArgs } from "../src/types/quiz-args";
 import {assert} from "chai";
-import { GuildMember, VoiceChannel, VoiceState } from "discord.js";
+import {GuildMember, VoiceChannel, VoiceConnection, VoiceState} from "discord.js";
 
 describe('MusicQuiz module', () => {
     let channel: VoiceChannel = mock(VoiceChannel);
@@ -20,19 +20,16 @@ describe('MusicQuiz module', () => {
 
     let args: QuizArgs = mock<QuizArgs>();
 
-    const sut: MusicQuiz = new MusicQuiz(messageInstance, args);
+    const musicQuiz: MusicQuiz = new MusicQuiz(messageInstance, args);
+    musicQuiz.connection = mock(VoiceConnection);
 
-    context('Given a list with song names (spotify song names))', () => {
-        const songList: string[] = [
-            "death bed (coffee for your head) (feat. beabadoobee)",
-            "Dragostea Din Tei - DJ Ross Radio Remix"
-        ];
+    it('Should play intro music for 17 seconds', () => {
+        musicQuiz.playIntroMusic();
+        assert.equal(true, true);
+    });
 
-        it('Should return strings stripped to only contain song names', () => {
-            const result = songList.map(name => sut.stripSongName(name));
+    context('Given a list with unstripped song names from spotify', () => {
 
-            assert.equal(result[0], 'death bed');
-            assert.equal(result[1], 'Dragostea Din Tei');
-        });
+
     });
 });

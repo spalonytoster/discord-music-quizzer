@@ -6,10 +6,10 @@ import Spotify from './spotify'
 import Youtube from 'scrape-youtube'
 import { Song } from 'song'
 import internal from 'stream'
+import TextUtil from "./utils/text-util";
 const shuffle = require('shuffle-array')
 
 const timeToGuess = 45;
-
 const stopCommand = '!stop'
 const skipCommand = '!skip'
 
@@ -39,18 +39,11 @@ export class MusicQuiz {
     }
 
     async start() {
-        this.songs = await this.getSongs(
-            this.arguments.playlist,
-            parseInt(this.arguments.songs, 10)
-        )
+        await this.getSongList();
 
         if (!this.songs || this.songs.length === 0) {
-            if (this.songs && this.songs.length === 0) {
-                await this.textChannel.send('Playlista nie ma żadnych piosen pajacuu')
-            }
-
+            await this.textChannel.send('Coś jest nie teges z Twoją playlistą mordo')
             await this.finish()
-
             return
         }
 
@@ -58,24 +51,34 @@ export class MusicQuiz {
             this.connection = await this.voiceChannel.join()
         } catch (e) {
             console.error('Error while trying to join channel and play intro', e)
-            
             await this.textChannel.send('Nie moge na kanał wbić :/')
             await this.finish()
-            
             return
-        }
-        
-        let quizStartDelayInMillis = 0
-        const introYoutubeUrl: string = 'https://www.youtube.com/watch?v=Oeaqmn9ZKJo';
-        try {
-            this.connection.play(await ytdl(introYoutubeUrl), { type: 'opus', volume: .5 })
-            quizStartDelayInMillis = 17000
-        } catch (e) {
-            console.error('Error while trying to play intro from url: ', introYoutubeUrl)
         }
 
         this.currentSong = 0
         this.scores = {}
+
+        await this.sendRulesMessageToChannel();
+        await this.playIntroMusic();
+        await this.startPlaying()
+        this.setupMessageReactions();
+    }
+
+    private setupMessageReactions() {
+        this.messageCollector = this.textChannel
+            .createMessageCollector((message: CommandoMessage) => !message.author.bot)
+            .on('collect', message => this.handleMessage(message))
+    }
+
+    private async getSongList() {
+        this.songs = await this.getSongs(
+            this.arguments.playlist,
+            parseInt(this.arguments.songs, 10)
+        )
+    }
+
+    private async sendRulesMessageToChannel() {
         await this.textChannel.send(`
             **JAKA TO MELODIAAAAAAA**! :headphones: :tada:
             **${this.songs.length}** pioseneczek zostało wytypowanych do dzisiejszej rozgrywki.
@@ -88,14 +91,18 @@ export class MusicQuiz {
 
             - ZACZYNAMY :microphone:
         `.replace(/  +/g, ''))
+    }
 
-        setTimeout(() => {
-            this.startPlaying()
+    async playIntroMusic() {
+        const introYoutubeUrl = 'https://youtube.com/watch?v=Oeaqmn9ZKJo';
 
-            this.messageCollector = this.textChannel
-                .createMessageCollector((message: CommandoMessage) => !message.author.bot)
-                .on('collect', message => this.handleMessage(message))
-        }, quizStartDelayInMillis)
+        try {
+            const songStream = await ytdl(introYoutubeUrl);
+            this.connection.play(songStream, {type: 'opus', volume: .5})
+            await new Promise(r => setTimeout(r, 17000));
+        } catch (e) {
+            console.error('Error while trying to play intro from url: ', introYoutubeUrl)
+        }
     }
 
     async startPlaying() {
@@ -148,7 +155,6 @@ export class MusicQuiz {
         if (content === stopCommand) {
             await this.printStatus('Koniec!')
             await this.finish()
-
             return
         }
 
@@ -196,7 +202,6 @@ export class MusicQuiz {
             .filter(member => !member.user.bot)
         if (this.skippers.length === members.size) {
             await this.nextSong('Chujowa piosenka, zgadzam się.')
-
             return
         }
 
@@ -275,7 +280,6 @@ export class MusicQuiz {
                 https://discordapp.com/api/oauth2/authorize?client_id=${process.env.DISCORD_CLIENT_ID}&scope=bot&permissions=3147840
             `.replace(/  +/g, ''))
         }
-
     }
 
     async getSongs(playlist: string, amount: number): Promise<Song[]> {
@@ -296,7 +300,7 @@ export class MusicQuiz {
                 .map((song: SpotifyApi.TrackObjectFull) => ({
                     link: `https://open.spotify.com/track/${song.id}`,
                     previewUrl: song.preview_url,
-                    title: this.stripSongName(song.name),
+                    title: TextUtil.stripSongName(song.name),
                     artist: (song.artists[0] || {}).name
                 }));
 
@@ -314,65 +318,14 @@ export class MusicQuiz {
 
     async findSong(song: Song): Promise<string> {
         try {
-            // const result = await ytsr(`${song.title} - ${song.artist}`, { limit: 1 })
             console.log(`searching youtube: '${song.title} ${song.artist}'`);
-            
-            const result = await Youtube.searchOne(`${song.title} ${song.artist}`)
-
-            return result?.link ?? null
+            const ytSearchResult = await Youtube.searchOne(`${song.title} ${song.artist}`)
+            return ytSearchResult?.link ?? null
         } catch (e) {
-            await this.textChannel.send('Jutub się zjebał aaaa :(\nSpróbuj później, bo chyba API mi się skończyło.')
+            await this.textChannel.send('Problem podczas streamowania muzyczki z jutuba')
             await this.finish()
-
             throw e
         }
-    }
-
-    /**
-     * Will remove all excess from the song names
-     * Examples:
-     * death bed (coffee for your head) (feat. beabadoobee) -> death bed
-     * Dragostea Din Tei - DJ Ross Radio Remix -> Dragostea Din Tei
-     *
-     * @param name string
-     */
-    stripSongName(name: string): string {
-        return name.replace(/ \(.*\)/g, '')
-            .replace(/ - .*$/, '')
-            // .replace(/'/, '')
-            // .replace(/./, '');
-
-        // name = this.replaceDiacritics(name);
-
-        // return name;
-    }
-
-    furtherStripSongName(name: string): string {
-        name = name.replace(/'/, '')
-            .replace(/./, '')
-            .replace(/,/, '');
-
-        return this.replaceDiacritics(name);
-    }
-
-    replaceDiacritics(song: string) {
-        const diacritics = [
-            /[\300-\306]/g, /[\340-\346]/g,  // A, a
-            /[\310-\313]/g, /[\350-\353]/g,  // E, e
-            /[\314-\317]/g, /[\354-\357]/g,  // I, i
-            /[\322-\330]/g, /[\362-\370]/g,  // O, o
-            /[\331-\334]/g, /[\371-\374]/g,  // U, u
-            /[\321]/g, /[\361]/g, // N, n
-            /[\307]/g, /[\347]/g, // C, c
-        ];
-
-        const chars = ['A', 'a', 'E', 'e', 'I', 'i', 'O', 'o', 'U', 'u', 'N', 'n', 'C', 'c'];
-
-        for (let i = 0; i < diacritics.length; i++) {
-            song = song.replace(diacritics[i], chars[i]);
-        }
-
-        return song;
     }
 
     pointText(): string {
